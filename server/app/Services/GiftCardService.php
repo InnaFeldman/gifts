@@ -18,18 +18,22 @@ class GiftCardService
         dd($query);
     }
 
-    public function getAllGiftCards(){
-        $data = GiftCard::join('users', 'users.id', '=', 'gift_cards.user_id')
+    public function getAllGiftCards($request, $pagination = 15){
+        $params = $request->all();
+        // if($params['pagination']){
+        //     $pagination = $params['pagination'];
+        // }
+
+        $query = GiftCard::join('users', 'users.id', '=', 'gift_cards.user_id')
         ->select(
             'gift_cards.*',
             'users.name as user_name',
             'users.email as user_email',
         )
-        ->orderBy('id')
-        ->take(50)
-        ->get();
+        ->orderBy('id');
+        $query = $query->paginate(15);
 
-        return $data;
+        return $query;
     }
 
 }

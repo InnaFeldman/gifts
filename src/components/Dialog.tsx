@@ -24,14 +24,22 @@ export default function Dialog({ show, onClose, onSaveCard, operation, existingC
     useEffect(() => {
         if (existingCardData) {
             setFormData({
-                name: existingCardData[0].user_name,
-                email: existingCardData[0].user_email,
+                name: existingCardData.user_name,
+                email: existingCardData.user_email,
                 password: '',
-                balance: existingCardData[0].balance,
-                expiry_date: existingCardData[0].expiry_date
+                balance: existingCardData.balance,
+                expiry_date: existingCardData.expiry_date
             });
 
             setTitle('Edit Card');
+        }else {
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                balance: '',
+                expiry_date: Date()
+            });
         }
     }, [existingCardData]);
 
@@ -39,6 +47,7 @@ export default function Dialog({ show, onClose, onSaveCard, operation, existingC
     function onCloseModal() {
         onClose();
     }
+
 
     function handleInputChange(event: { target: { id: any; value: any; }; }) {
         const { id, value } = event.target;
@@ -50,23 +59,36 @@ export default function Dialog({ show, onClose, onSaveCard, operation, existingC
 
     function handleSubmit(event: { preventDefault: () => void; }) {
         event.preventDefault();
-        // const apiEndpoint = operation === 'edit'
-        //     ? `http://127.0.0.1:8000/api/gift-cards/${formData.id}`
-        //     : 'http://127.0.0.1:8000/api/gift-cards/add';
+        let updatedCardData;
+        if(operation === 'edit'){
+            updatedCardData = {
+                ...existingCardData,
+                user_name: formData.name,
+                user_email: formData.email,
+                password: '',
+                balance: formData.balance, 
+                expiry_date: formData.expiry_date
+            };
+        }
 
-        // const httpMethod = operation === 'edit' ? 'put' : 'post';
+        const apiEndpoint = operation === 'edit'
+            ? `http://127.0.0.1:8000/api/gift-cards/`+ existingCardData.id
+            : 'http://127.0.0.1:8000/api/gift-cards/add';
 
-        // axios({
-        //     method: httpMethod,
-        //     url: apiEndpoint,
-        //     data: formData,
-        // })
-        //     .then(res => {
-        //         console.log(res);
-        //         onSaveCard(res.data);
-        //         onCloseModal();
-        //     })
-        //     .catch(err => console.log(err));
+        const httpMethod = operation === 'edit' ? 'put' : 'post';
+        const data = operation === 'edit' ? updatedCardData : formData;
+        console.log(data);
+
+        axios({
+            method: httpMethod,
+            url: apiEndpoint,
+            data: data,
+        })
+            .then(res => {
+                onSaveCard(res.data);
+                onCloseModal();
+            })
+            .catch(err => console.log(err));
     }
 
     return (
@@ -102,18 +124,22 @@ export default function Dialog({ show, onClose, onSaveCard, operation, existingC
                                 onChange={handleInputChange}
                             />
                         </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label htmlFor="password" value="Your password *" />
-                            </div>
-                            <TextInput
-                                id="password"
-                                type="password"
-                                value={formData.password}
-                                required
-                                onChange={handleInputChange}
-                            />
+                        {operation === 'create' &&
+                            <div>
+                                <div className="mb-2 block">
+                                    <Label htmlFor="password" value="Your password *" />
+                                </div>
+                                <TextInput
+                                    id="password"
+                                    type="password"
+                                    value={formData.password}
+                                    required
+                                    disabled
+                                    onChange={handleInputChange}
+                                />
                         </div>
+                        }
+
                         <div>
                             <div className="mb-2 block">
                                 <Label htmlFor="balance" value="Balance *" />

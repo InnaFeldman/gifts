@@ -6,6 +6,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Dialog from '../components/Dialog';
 
+
 export default function GiftCards() {
     interface Card {
         id: number;
@@ -16,24 +17,37 @@ export default function GiftCards() {
         user_email: string
     }
 
+    interface FilterState {
+        name?: string;
+    }
+
     const [cards, setCards] = useState<Card[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const onPageChange = (page: number) => setCurrentPage(page);
     const [openModal, setOpenModal] = useState(false);
     const [operationType, setOperationType] = useState('create');
     const [existingCardData, setExistingCardData] = useState(null);
+    const [cardId, setCardId] =  useState(null);
+    const [filters, setFilters] = useState<FilterState>({});
 
 
     useEffect(() => {
-        fetch('http://127.0.0.1:8000/api/gift-cards')
-            .then((res) => res.json())
-            .then((data) => {
-                setCards(data);
-            })
-            .catch((err) => {
-                console.log(err.message);
-            });
-    }, []);
+        // const queryParams = new URLSearchParams(filters).toString();
+        getData();
+
+    }, [filters]);
+
+    function getData(queryParams?: string){
+        let url = queryParams ? `http://127.0.0.1:8000/api/gift-cards?${queryParams}` : `http://127.0.0.1:8000/api/gift-cards`;
+
+        fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+            setCards(data['data']);
+        })
+        .catch((err) => {
+            console.log(err.message);
+        });
+    }
 
 
     function onDeleteCars($id: number) {
@@ -52,26 +66,48 @@ export default function GiftCards() {
         setOpenModal(false);
     }
 
-    function handleOpenModal(type: string, id: number | null = null) {
+    function handleOpenModal(type: string, id: number | null) {
         setOperationType(type);
+        setCardId(id);
+        setExistingCardData(null);
         setOpenModal(true);
-        console.log(operationType);
-        if (operationType === 'edit' && id !== null) {
-            //console.log('edit type');
-            let card = cards.filter((card) => card.id === id);
-            setExistingCardData(card);
-        }
     }
 
-    function handleSaveCard(data: any) {
-        if (operationType === 'create') {
-            setCards((prevCards) => [...prevCards, data]);
-        } else if (operationType === 'edit') {
-            // Logic for editing an existing card
+    useEffect(() => {
+        if (operationType === 'edit' && cardId !== null) {
+            let card = cards.filter((card) => card.id === cardId);;
+            setExistingCardData(card[0]);
+        }else if(operationType === 'create'){
+            setExistingCardData(null);
         }
+    }, [openModal]);
+
+
+    function handleSaveCard(data: any) {
+        setCards((prevCards) => [...prevCards, data]);
         setOpenModal(false);
         setExistingCardData(null);
     };
+
+    function onPageChange(page: number){
+        setFilters((prevFilters) => ({
+            ...prevFilters,
+            page: page,
+        }));
+    }
+
+    function handleFilterChange(event){
+        const { name, value } = event.target;
+        setFilters((prevFilters) => ({
+            ...prevFilters,
+            [name]: value,
+        }));
+    }
+
+    function handleFilterSend(){
+        const queryParams = new URLSearchParams(filters).toString();
+        getData(queryParams);
+    }
 
 
 
@@ -80,7 +116,13 @@ export default function GiftCards() {
             <h1 className='mb-[5rem] mt-[3rem] text-center'>Gift Cards page</h1>
 
             <div className='filters mb-[2rem]'>
-                <Button color="success" onClick={() => handleOpenModal('create')}>Add New</Button>
+                <div className='flex'>
+                    <TextInput onChange={handleFilterChange} name="name"  placeholder="Name" type="text" />
+                    <TextInput onChange={handleFilterChange} name="email" placeholder="Email" type="text" />
+                    <TextInput onChange={handleFilterChange} name="expiry_date" placeholder="Expiry Date" type="date" />
+                    <Button color="success" onClick={handleFilterSend}>Filter</Button>
+                </div>
+                <Button color="success" onClick={() => handleOpenModal('create', null)}>Add New</Button>
                 <Dialog show={openModal}
                     onClose={() => setOpenModal(false)}
                     onSaveCard={handleSaveCard}
